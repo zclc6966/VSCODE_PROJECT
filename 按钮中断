@@ -1,0 +1,97 @@
+
+/*代码思路写在了结尾，那个oled屏幕的调用函数我不会写（）*/
+
+#include "BSP/timer.h"
+#include "state.h"
+#include "main.h"
+volatile uint32_t Timer = 0;
+
+typedef struct 
+{
+  uint8_t key_state;//按键状态
+  uint8_t filter_cnt;//记录按键变化状态后维持这个状态的时间变量
+  GPIO_TYPEDef *gpio_port;//接入的GPIO口（如果用stm自带头文件可不可以？）
+  uint16_t gpio_pin;//GPIO引脚名
+  uint8_t press_flag;//按键是否按下
+  void (*press_callback)(void);//按键按下后调用的函数
+}
+Key_HandleTypeDef key_list[7]=
+{
+  .key_state=0, .filter_cnt=0, .gpio_port=GPIOA, .gpio_pin=GPIO_PIN_1, .press_flag=0, .press_callback
+  .key_state=0, .filter_cnt=0, .gpio_port=GPIOA, .gpio_pin=GPIO_PIN_2, .press_flag=0, .press_callback
+  .key_state=0, .filter_cnt=0, .gpio_port=GPIOA, .gpio_pin=GPIO_PIN_3, .press_flag=0, .press_callback
+  .key_state=0, .filter_cnt=0, .gpio_port=GPIOA, .gpio_pin=GPIO_PIN_4, .press_flag=0, .press_callback
+  .key_state=0, .filter_cnt=0, .gpio_port=GPIOA, .gpio_pin=GPIO_PIN_5, .press_flag=0, .press_callback
+  .key_state=0, .filter_cnt=0, .gpio_port=GPIOA, .gpio_pin=GPIO_PIN_6, .press_flag=0, .press_callback
+  .key_state=0, .filter_cnt=0, .gpio_port=GPIOA, .gpio_pin=GPIO_PIN_7, .press_flag=0, .press_callback
+}
+/*给7个按钮列了单子，把初始状态全设为松开，衡量状态的时间变量设为0*/
+void Key1_Action(void){}
+void Key2_Action(void){}
+void Key3_Action(void){}
+void Key4_Action(void){}
+void Key5_Action(void){}
+void Key6_Action(void){}
+void Key7_Action(void){}
+/*中间写配套oled的函数？oled版块此人是完全看不懂啊...*/
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+  if (htim->Instance == TIM4) {
+    Timer++;
+    for(uint8_t i=0;i<7;i++)
+    {
+      uint8_t current_pin_level==HAL_GPIO_ReadPin(key_list[i].gpio_port,key_list[i].gpio_pin);
+      /*判断某个引脚的高低电平*/
+      if(current_pin_level==GPIO_PIN_RESET)
+      {
+        if(key_list[i].filter_cnt<10)//用10ms去判断是真的按下还是抖动
+        {
+          key_list[i].filter_cnt++;//若真的按下，cnt变量将加到10
+        }
+        else
+        {
+          if (key_list[i].key_state=0)//若cnt变量达到10，执行到这里，判断之前的状态是不是按下，以防hold长条，若不是则执行
+          {
+            key_list.key_state=1;
+            key_list.press_flag=1;
+            if(key_list[i].press_callback!=NULL)
+            {
+              key_list[i].press_callback();
+            }
+            //这里是否可以直接把数组里的press_callback改成NULL？
+  
+          }
+        }
+      }
+      else
+      {
+        if(key_list[i].filter_cnt>0)
+        {
+          key_list[i].filter_cnt--;
+        }
+        /*复位操作*/
+        else
+        {
+          key_list[i].key_state=0;
+        }
+      }
+    }
+
+    State_Update();
+  }
+}
+/*大概思路是先判断引脚是否为低电平，
+是：
+  给filter_cnt加值，1ms加1
+    判断按下时间是否超过10ms?
+      不是：按键的抖动，通过复位操作回位
+      是：判断到按键确实在被按下
+        判断是否是长按？
+          是：不做状态变化
+          不是：变化状态
+
+
+不是：
+  1.松开未复位，此时要把filter_cnt变量复位
+  2.根本没按下，那就维持原样
+*/
