@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<time.h>
+
 typedef struct{
 	double**mat;
 	int row, col;
@@ -22,4 +23,3 @@ int MaxMatrix(Matrix*T); 			//矩阵元素最大值
 void TransMatrix(Matrix*T); 		//矩阵转置
 void NormMatrix(Matrix*T); 		//矩阵归一化
 void ReverseMatrix(Matrix*A, Matrix*B); //B是A的逆矩阵
-
